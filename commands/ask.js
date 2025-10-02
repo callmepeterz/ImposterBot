@@ -111,12 +111,12 @@ module.exports = {
             context += `${u}: ${userData[u]?.pronouns}\n`;
         }
 
-        context += "\n\n-----\n\nSlash commands of the Discord user client you are operating through which users may use (/ indicates commands, indent indicates subcommands of the preceding command)\n";
+        systemPromptFooter += "\n\n-----\n\nSlash commands of the Discord user client you are operating through which users may use (/ indicates commands, indent indicates subcommands of the preceding command)\n";
         for(let [_, command] of interaction.client.commands){
-            context += `/${command.data.name}: ${command.data.description}\n`;
+            systemPromptFooter += `/${command.data.name}: ${command.data.description}\n`;
             for(let subcommand of command.data.options.filter(o => o.toJSON().type === ApplicationCommandOptionType.Subcommand)){
                 let subcommandjson = subcommand.toJSON();
-                context += `    ${subcommandjson.name}: ${subcommandjson.description}\n`;
+                systemPromptFooter += `    ${subcommandjson.name}: ${subcommandjson.description}\n`;
             }
         }
 
@@ -173,6 +173,8 @@ module.exports = {
             context += `\n\n-----\n\nRecent polls in this channel (most recent poll is at the bottom of the list)\n`;
             for(let [_, p] of polls) context += pollString(p);
         }
+
+        contents[0].text += context;
         
         const selectedKey = interaction.options.getInteger("key") ?? 1;
         const aiInstance = interaction.client.ai[selectedKey];
@@ -186,7 +188,7 @@ module.exports = {
             model: interaction.options.getString("model") ?? "gemini-2.5-flash",
             contents,
             config: {
-                systemInstruction: systemInstruction + systemPromptFooter + context,
+                systemInstruction: systemInstruction + systemPromptFooter,
                 temperature:interaction.options.getNumber("temperature") ?? 0.8,
                 tools: [
                     { googleSearch: {} },
@@ -285,7 +287,7 @@ function pollString(p){
 }
 
 function addCitations(response) {
-    let text = response?.text;
+    let text = response?.text?.trim();
     const supports = response.candidates[0]?.groundingMetadata?.groundingSupports;
     const chunks = response.candidates[0]?.groundingMetadata?.groundingChunks;
 
