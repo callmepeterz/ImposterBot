@@ -82,6 +82,7 @@ module.exports = {
             }
         ];
         let mimeType = attachment?.contentType?.split(";")?.[0];
+        if(mimeType === "application/javacript") mimeType = "text/javascript";
         let attachmentData = null;
 
         if(!prompt) return deferred?.edit("Invalid prompt!");
