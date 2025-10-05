@@ -255,12 +255,14 @@ module.exports = {
 
         responseText = responseText.trim();
 
-        let responseFile = null;
+        let responseFile = [];
         if(!responseText){
             responseText = "No text was returned.";
-            responseFile = new AttachmentBuilder()
-            .setName("response_raw.json")
-            .setFile(Buffer.from(JSON.stringify(response, null, "\t")));
+            responseFile.push(
+                new AttachmentBuilder()
+                .setName("response_raw.json")
+                .setFile(Buffer.from(JSON.stringify(response, null, "\t")))
+            ) 
         }
 
         messages = interaction.client.aiContext.messages.get(channID) ?? [];
@@ -273,14 +275,14 @@ module.exports = {
 
         if(interaction.context === 0){
             for(let x = 0; x < chunks.length; x++){
-                if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: [responseFile], allowedMentions: {users: [], roles: []}});
+                if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [], roles: []}});
                 else if(x === 1) msg = await interaction?.followUp({content: chunks[1]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
                 else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
             }
         }
         else {
              for(let x = 0; x < chunks.length; x++){
-                if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: [responseFile], allowedMentions: {users: [], roles: []}});
+                if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [], roles: []}});
                 else await interaction.user.send({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
             }
         }
