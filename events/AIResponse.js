@@ -17,10 +17,11 @@ module.exports = {
     /**
      * @param {Message} message 
      */
-    async execute(message){
+    async execute(message, attempt = 0){
+        attempt ++;
         try {
             if(!message.mentions.has(message.client.user.id) || !message.content || message.author.bot) return;
-            if(Date.now() - message.client.aiContext.lastCalled[message.author.id] < 10000){
+            if(attempt === 1 && Date.now() - message.client.aiContext.lastCalled[message.author.id] < 10000){
                 let msg = await message.channel.send(`<@${message.author.id}> You are on a cooldown, try again in <t:${Math.round((message.client.aiContext.lastCalled[message.author.id] + 15000) / 1000)}:R>`).catch(()=>{});
                 if(msg) setTimeout(()=>msg.delete().catch(()=>{}), 3000);
                 return;
@@ -248,13 +249,16 @@ module.exports = {
 
            let responseFile = [];
             if(!responseText){
+                if(attempt < parseInt(process.env.AI_MAX_ATTEMPT)) return setTimeout(() => this.execute(message, attempt), 1000);
                 responseText = "No text was returned.";
                 responseFile.push(
                     new AttachmentBuilder()
                     .setName("response_raw.json")
                     .setFile(Buffer.from(JSON.stringify(response, null, "\t")))
-                ) 
+                );
             }
+
+            if(attempt > 1) responseText +=`\n-# Attempt ${attempt}`;
 
             //add response text to message history
             messages = message.client.aiContext.messages.get(channID) ?? [];
