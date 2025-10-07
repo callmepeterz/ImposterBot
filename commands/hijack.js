@@ -43,5 +43,33 @@ module.exports = {
         interaction.client.user.setAvatar(Buffer.concat(pfpData)).catch(()=>{});
         interaction.client.user.setUsername(target.username);
         interaction.reply({embeds:[embed.setDescription(`Hijacked <@${target.id}>`)], flags: MessageFlags.Ephemeral});
+
+        let contents = [
+            {
+                inlineData: {
+                    mimeType: "image/png",
+                    data: Buffer.concat(pfpData).toString("base64"),
+                },
+            },
+            {
+                text: "This is a system intitialization event. The attached image is your current profile picture. Give a detailed but concise description, as detailed as possible, for your future self, not the user, including any inside jokes or people you know if detected, for the profile picture, obeying the usual rules for responses of such command (no emojis, only use characters allowed, max length, no mentions, etc.).",
+                role: "model"
+            }
+        ];
+
+        const response = await client.ai[1].models.generateContent({
+            model: "gemini-2.5-flash",
+            contents,
+            config: {
+                systemInstruction,
+                temperature: 0.8
+            }
+        }).catch(err=>console.error(err));
+
+        client.profilepic.description = response?.text;
+        client.profilepic.user = target.id;
+        fs.writeFileSync(path.join(process.cwd(), "data/bot/profilepic.txt"), client.profilepic.description);
+        fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), client.profilepic.description);
+        console.log("Profile picture detected: " + client.profilepic.description);
     },
 };

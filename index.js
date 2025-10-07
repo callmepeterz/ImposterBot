@@ -22,6 +22,11 @@ client.banner = {
     timeStamp: null,
     description: fs.readFileSync("./data/bot/banner.txt", "utf-8")?.toString() ?? null,
 }
+// storing profile pic description
+client.profilepic = {
+    user: fs.readFileSync("./data/bot/impersonated.txt", "utf-8")?.toString() ?? null,
+    description: fs.readFileSync("./data/bot/profilepic.txt", "utf-8")?.toString() ?? null,
+}
 // storing status stuffs
 client.status = {
     timeStamp: null,
