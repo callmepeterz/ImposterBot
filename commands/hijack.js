@@ -61,7 +61,7 @@ module.exports = {
             model: "gemini-2.5-flash",
             contents,
             config: {
-                systemInstruction,
+                systemInstruction: interaction.client.aiContext.systemInstruction,
                 temperature: 0.8
             }
         }).catch(err=>console.error(err));
