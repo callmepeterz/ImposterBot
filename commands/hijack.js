@@ -71,7 +71,7 @@ module.exports = {
         interaction.client.profilepic.description = response?.text;
         interaction.client.profilepic.user = target.id;
         fs.writeFileSync(path.join(process.cwd(), "data/bot/profilepic.txt"), interaction.client.profilepic.description);
-        fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), interaction.client.profilepic.description);
+        fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), interaction.client.profilepic.user);
         console.log("Profile picture detected: " + interaction.client.profilepic.description);
     },
 };
