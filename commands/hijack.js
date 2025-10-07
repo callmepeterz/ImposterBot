@@ -28,7 +28,7 @@ module.exports = {
         let botMember = interaction.guild.members.cache.get(interaction.client.user.id);
         let botRole = interaction.guild.roles.cache.get(process.env.ROLE_ID);
 
-        botMember?.setNickname(targetMember.nickname).catch(()=>{});
+        botMember?.setNickname(targetMember.nickname ?? target.displayName).catch(()=>{});
         botRole?.setColors({primaryColor: targetMember.displayColor})//.catch(()=>{});
         botRole?.setName(targetRole?.name).catch(()=>{});
 
