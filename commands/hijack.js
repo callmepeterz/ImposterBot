@@ -70,6 +70,6 @@ module.exports = {
         interaction.client.profilepic.user = target.id;
         fs.writeFileSync(path.join(process.cwd(), "data/bot/profilepic.txt"), client.profilepic.description);
         fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), client.profilepic.description);
-        console.log("Profile picture detected: " + client.profilepic.description);
+        console.log("Profile picture detected: " + interaction.client.profilepic.description);
     },
 };
