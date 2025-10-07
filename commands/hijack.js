@@ -57,7 +57,7 @@ module.exports = {
             }
         ];
 
-        const response = await client.ai[1].models.generateContent({
+        const response = await interaction.client.ai[1].models.generateContent({
             model: "gemini-2.5-flash",
             contents,
             config: {
