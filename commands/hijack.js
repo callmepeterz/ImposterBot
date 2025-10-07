@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, SlashCommandUserOption, ChatInputCommandInteraction, InteractionResponse, EmbedBuilder, InteractionContextType, MessageFlags } = require('discord.js');
 const get = require("../util/httpsGet.js");
+const fs = require("node:fs");
 
 module.exports = {
     data: new SlashCommandBuilder()
