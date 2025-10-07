@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, SlashCommandUserOption, ChatInputCommandInteraction, InteractionResponse, EmbedBuilder, InteractionContextType, MessageFlags } = require('discord.js');
 const get = require("../util/httpsGet.js");
 const fs = require("node:fs");
+const path = require("node:path");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -69,8 +70,8 @@ module.exports = {
 
         interaction.client.profilepic.description = response?.text;
         interaction.client.profilepic.user = target.id;
-        fs.writeFileSync(path.join(process.cwd(), "data/bot/profilepic.txt"), client.profilepic.description);
-        fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), client.profilepic.description);
+        fs.writeFileSync(path.join(process.cwd(), "data/bot/profilepic.txt"), interaction.client.profilepic.description);
+        fs.writeFileSync(path.join(process.cwd(), "data/bot/impersonated.txt"), interaction.client.profilepic.description);
         console.log("Profile picture detected: " + interaction.client.profilepic.description);
     },
 };
