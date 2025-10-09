@@ -39,7 +39,7 @@ module.exports = {
        
         if(Date.now() - interaction.client.lastHijacked < process.env.HIJACK_COOLDOWN) return interaction.reply({embeds:[embed.setDescription(`Hijacked <@${target.id}> (Profile pic change on cooldown.)`)], flags: MessageFlags.Ephemeral});
         
-        let pfpURL = target.avatarURL();
+        let pfpURL = target.avatarURL({ size: 1024 });
         if(!pfpURL) return interaction.reply({embeds:[embed.setDescription(`Hijacked <@${target.id}> (No profile pic.)`)], flags: MessageFlags.Ephemeral});
         let pfpData = await get(pfpURL);
         interaction.client.user.setAvatar(Buffer.concat(pfpData)).catch(()=>{});
