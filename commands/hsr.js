@@ -1,6 +1,8 @@
 const { SlashCommandBuilder, SlashCommandStringOption, SlashCommandUserOption, SlashCommandIntegerOption, ChatInputCommandInteraction, InteractionResponse, EmbedBuilder } = require('discord.js');
 const { StarRail, LightCone } = require("starrail.js");
 
+let characterList;
+
 module.exports = {
     data: new SlashCommandBuilder()
     .setName("hsr")
@@ -105,7 +107,7 @@ module.exports = {
      * @param {AutocompleteInteraction & {client: { HSR: StarRail }} interaction 
      */
     async autocomplete(interaction) {
-        let characterList = interaction.client.HSR.getAllCharacters(true).map(c => {
+        if(!characterList) characterList = interaction.client.HSR.getAllCharacters(true).map(c => {
             let name = c.id > 8000 ? specialIDs[c.id] : c.name.get("en")
             return {name, value: c.id}
         });
