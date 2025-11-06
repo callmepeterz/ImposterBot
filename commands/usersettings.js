@@ -34,6 +34,18 @@ module.exports = {
     )
     .addSubcommand(
         new SlashCommandSubcommandBuilder()
+        .setName("hsr")
+        .setDescription("Set your Honkai: Star Rail UID")
+        .addStringOption(
+            new SlashCommandStringOption()
+            .setName("uid")
+            .setDescription("Your Honkai: Star Rail UID")
+            .setRequired(true)
+            .setMaxLength(9)
+        )
+    )
+    .addSubcommand(
+        new SlashCommandSubcommandBuilder()
         .setName("clear")
         .setDescription("Clear user settings")
         .addStringOption(
@@ -44,6 +56,7 @@ module.exports = {
             .setChoices(
                 {name: "Pronouns", value: "pronouns"},
                 {name: "AI custom instruction", value: "custominstruction"},
+                {name: "Honkai: Star Rail UID", value: "hsr"},
             )
         )
     )
@@ -59,6 +72,7 @@ module.exports = {
             .setChoices(
                 {name: "Pronouns", value: "pronouns"},
                 {name: "AI custom instruction", value: "custominstruction"},
+                {name: "Honkai: Star Rail UID", value: "hsr"},
             )
         )
     ),
@@ -89,7 +103,12 @@ module.exports = {
 
             case "custominstruction":
                 userData.customInstruction = interaction.options.getString("custominstruction") ?? null;
-                interaction.reply({embeds: [embed.setDescription(`Your user-specific custom instruction have been updated to \n\`\`\`\n${userData.customInstruction}\n\`\`\``)], flags: MessageFlags.Ephemeral});
+                interaction.reply({embeds: [embed.setDescription(`Your user-specific custom instruction has been updated to \n\`\`\`\n${userData.customInstruction}\n\`\`\``)], flags: MessageFlags.Ephemeral});
+                break;
+
+            case "hsr":
+                userData.hsrUid = interaction.options.getString("uid") ?? null;
+                interaction.reply({embeds: [embed.setDescription(`Your Honkai: Star Rail UID has been updated to \`${userData.hsrUid}\`.`)], flags: MessageFlags.Ephemeral});
                 break;
 
             case "clear":
@@ -102,6 +121,10 @@ module.exports = {
                         userData.customInstruction = null;
                         text = "Your custom instruction has been removed.";
                         break;
+                    case "hsr":
+                        userData.hsrUid = null;
+                        text = "Your Honkai: Star Rail UID has been removed.";
+                        break;
                     
                 }
                 interaction.reply({embeds: [embed.setDescription(text)], flags: MessageFlags.Ephemeral});
@@ -113,6 +136,9 @@ module.exports = {
                         break;
                     case "custominstruction":
                         text = userData.customInstruction ? `Your user-specific custom instruction is \n\`\`\`\n${userData.customInstruction}\n\`\`\`` : "You have not set your custom instruction.";
+                        break;
+                   case "hsr":
+                        text = userData.hsrUid ? `Your Honkai: Star Rail UID is \`${userData.hsrUid}\`.` : "You have not set your Honkai: Star Rail UID.";
                         break;
                    }
                 return interaction.reply({embeds: [embed.setDescription(text)], flags: MessageFlags.Ephemeral});

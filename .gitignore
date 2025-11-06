@@ -134,3 +134,6 @@ assets/hangman/words_rand.txt
 
 # Gemini system prompt
 systemPrompt.txt
+
+# HSR cache
+hsrCache/

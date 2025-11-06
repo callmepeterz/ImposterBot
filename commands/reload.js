@@ -18,6 +18,7 @@ module.exports = {
             {name: "Event listener callbacks", value: "events"},
             {name: "User data", value: "userdata"},
             {name: "AI system instruction", value:"systeminstruction"},
+            {name: "HSR cache", value:"hsrcache"},
         )
     ),
     index: "",
@@ -90,6 +91,11 @@ module.exports = {
                 interaction.client.aiContext.systemInstruction = fs.readFileSync(systemInstructionPath, "utf-8").toString();
                 console.log("Reloaded system instruction.");
                 interaction.reply({embeds: [embed.setDescription(`Reloaded system instruction.`)]});
+                break;
+            case "hsrcache":
+                interaction.client.HSR.cachedAssetsManager.fetchAllContents();
+                console.log("Reloaded HSR cache.");
+                interaction.reply({embeds: [embed.setDescription(`Reloaded HSR cache.`)]});
                 break;
         }
     },

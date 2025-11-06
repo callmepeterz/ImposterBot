@@ -5,11 +5,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const client = new Client({intents: JSON.parse(process.env.INTENTS), partials: JSON.parse(process.env.PARTIALS)});
 const { GoogleGenAI } = require("@google/genai");
+const { StarRail } = require("starrail.js");
 
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
 client.lastHijacked = 0;
+
+//HSR client
+client.HSR = new StarRail();
+client.HSR.cachedAssetsManager.cacheDirectoryPath = "./hsrCache";
+client.HSR.cachedAssetsManager.cacheDirectorySetup();
 
 // Default is 1
 client.ai = {
