@@ -18,7 +18,7 @@ module.exports = {
     .addStringOption(
         new SlashCommandStringOption()
         .setName("question")
-        .setDescription("Ask the Secretary of State")
+        .setDescription("Ask the bot")
         .setRequired(true)
         .setMaxLength(2000)
     )
