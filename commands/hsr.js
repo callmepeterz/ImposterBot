@@ -63,7 +63,6 @@ module.exports = {
 
                 embed
                 .setAuthor({name: player.nickname.slice(0, 256), iconURL: player.icon.icon.url})
-
                 .setTitle(`${characterName} (Lv. ${character.level} - E${character.eidolons}S${character.lightCone?.superimposition?.level ?? 0})`.slice(0, 256))
                 .setThumbnail(character.characterData.icon.url)
                 .setDescription(statString)

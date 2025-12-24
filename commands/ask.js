@@ -1,5 +1,6 @@
 const { Collection, SlashCommandBuilder, SlashCommandStringOption, SlashCommandNumberOption, SlashCommandAttachmentOption, ApplicationCommandOptionType, ChatInputCommandInteraction, InteractionResponse, SlashCommandIntegerOption, PresenceUpdateStatus, AttachmentBuilder, InteractionContextType } = require('discord.js');
 const get = require("../util/httpsGet.js");
+const { HarmCategory, HarmBlockThreshold } = require("@google/genai");
 const { formatMath, formatSuperscript } = require("../util/formatMath.js");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -17,7 +18,7 @@ module.exports = {
     .addStringOption(
         new SlashCommandStringOption()
         .setName("question")
-        .setDescription("Ask the bot")
+        .setDescription("Ask the Secretary of State")
         .setRequired(true)
         .setMaxLength(2000)
     )
@@ -30,20 +31,32 @@ module.exports = {
     .addStringOption(
         new SlashCommandStringOption()
         .setName("model")
-        .setDescription("Specify which model to use, default is Gemini 2.5 Flash")
+        .setDescription("Specify which model to use, default is Gemini 3 Flash")
         .setRequired(false)
         .addChoices(
+            {name: "Gemini 3 Flash", value: "gemini-3-flash-preview"},
+            {name: "Gemini 3 Pro", value: "gemini-3-pro-preview"},
             {name: "Gemini 2.5 Flash", value: "gemini-2.5-flash"},
-            {name: "Gemini 2.5 Pro", value: "gemini-2.5-pro"}
+            {name: "Gemini 2.5 Pro", value: "gemini-2.5-pro"},
         )
     )
     .addNumberOption(
         new SlashCommandNumberOption()
         .setName("temperature")
-        .setDescription("Specify temperature for the AI, default is 0.8")
+        .setDescription("Specify temperature for the AI, default is 1 (recommended)")
         .setRequired(false)
         .setMinValue(0)
         .setMaxValue(2)
+    )
+    .addStringOption(
+        new SlashCommandStringOption()
+        .setName("thinking_level")
+        .setDescription("Pick the thinking level for the AI, default is 'High'")
+        .setRequired(false)
+        .addChoices(
+            {name: "High", value: "high"},
+            {name: "Low", value: "low"},
+        )
     )
     .addIntegerOption(
         new SlashCommandIntegerOption()
@@ -72,6 +85,8 @@ module.exports = {
         let botMember = interaction?.guild?.members?.cache?.get(interaction.client.user.id);
         let systemPromptFooter = `\n\n-----\n\nCurrent user: ${interaction.user.displayName}, ID: ${interaction.user.id}, ${interaction.context === InteractionContextType.Guild ? `server nickname: ${interaction?.member?.nickname}, ` : ""}mentionable with <@${interaction.user.id}>; Current date and time: ${new Date().toString()}; ${interaction.context === 0 ? "Currently in a public Discord server" : "Currently in the user's direct messages"}; Current status: "${interaction.client.status.description}, set at ${(new Date(interaction.client.status.timeStamp)).toString()}"; Current banner: ${interaction.client.banner.description}, set at ${interaction.client.banner.timeStamp?.toString()}; Currently using user ${interaction.client?.profilepic?.user} 's nickname and profile picture, nickname: ${botMember?.nickname ?? interaction.client.user.username}, profile picture description: ${interaction.client?.profilepic?.description ?? "Not available"}`;
         let context = "";
+
+        //prevent internal command injections
         let prompt = interaction.options.getString("question")
         ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
         ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
@@ -89,6 +104,7 @@ module.exports = {
 
         if(!prompt) return deferred?.edit("Invalid prompt!");
 
+        //download attachment, if any
         if(attachment){
             if(supportedFileFormats.includes(mimeType)){
                 let rawattachmentData = await get(attachment.url);
@@ -105,15 +121,19 @@ module.exports = {
             else attachment = null;
         }
 
+        //add context
         let userData = interaction.client.userData;
 
+        //custom instruction
         context += "\n\n-----\n\nThis user's custom instruction for you\n" + (userData[interaction.user.id]?.customInstruction ?? "None");
 
+        //pronouns
         context += "\n\n-----\n\nKnown preferred pronouns of users (default to they/them for unknown users)\n";
         for(let u in userData){
             context += `${u}: ${userData[u]?.pronouns}\n`;
         }
 
+        //bot's discord slash commands
         systemPromptFooter += "\n\n-----\n\nSlash commands of the Discord user client you are operating through which users may use (/ indicates commands, indent indicates subcommands of the preceding command)\n";
         for(let [_, command] of interaction.client.commands){
             systemPromptFooter += `/${command.data.name}: ${command.data.description}\n`;
@@ -123,12 +143,14 @@ module.exports = {
             }
         }
 
+        //request history
         let summaries = interaction.client.aiContext.summaries.get(interaction.context === 0 ? interaction.guild.id : interaction.user.id) ?? [];
         if(summaries.length){
             context += "\n\n-----\n\nRecent requests and responses (most recent request is at the bottom of the list)\n";
             for(let s of summaries) context += s + "\n";
         }
 
+        //fetch messages and polls if channel hasn't been fetched
         const channID = interaction.context === 0 ? interaction.channel.id : interaction.user.id;
         let messages = interaction.client.aiContext.messages.get(channID) ?? [];
         let polls = interaction.client.aiContext.polls.get(channID) ?? new Collection();
@@ -167,11 +189,13 @@ module.exports = {
             interaction.client.aiContext.hasAttemptedChannelFetch.set(channID, true);
         }
         
+        //message history
         if(messages.length){
             context += `\n\n-----\n\nRecent messages in this channel (${interaction.context === 0 ? `#${interaction.channel.name}` : `direct messages of ${interaction.user.displayName}, ID: ${interaction.user.id}`}) (most recent message is at the bottom of the list)\n`;
             for(let m of messages) context += m + "\n";
         }
 
+        //poll history
         if(polls.size){
             context += `\n\n-----\n\nRecent polls in this channel (most recent poll is at the bottom of the list)\n`;
             for(let [_, p] of polls) context += pollString(p);
@@ -179,6 +203,7 @@ module.exports = {
 
         contents[0].text += context;
         
+        //API key selection
         const selectedKey = interaction.options.getInteger("key") ?? 1;
         const aiInstance = interaction.client.ai[selectedKey];
         
@@ -187,12 +212,38 @@ module.exports = {
             return;
         }
 
+        //send request to AI API
+
+        const safetySettings = [
+            {
+                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+            {
+                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+            },
+        ];
+
         const response = await aiInstance.models.generateContent({
-            model: interaction.options.getString("model") ?? "gemini-2.5-flash",
+            model: interaction.options.getString("model") ?? "gemini-3-flash-preview",
             contents,
             config: {
                 systemInstruction: systemInstruction + systemPromptFooter,
-                temperature:interaction.options.getNumber("temperature") ?? 0.8,
+                temperature:interaction.options.getNumber("temperature") ?? 1,
+                safetySettings,
+                thinkingConfig: {
+                    thinkingLevel: interaction.options.getString("thinking_level") ?? "high",
+                    includeThoughts: false,
+                },
                 tools: [
                     { googleSearch: {} },
                     { urlContext: {} }
@@ -200,15 +251,18 @@ module.exports = {
             }
         });
 
+        //add citations
         let responseText = addCitations(response);
 
         //math formatting
         responseText = formatMath(responseText);
 
+        //extract internal commands
         let status = responseText.match(setStatusRegex)?.[1]?.slice(0, 128);
         let bannerDesc = responseText.match(setBannerRegex)?.[1]?.slice(0, 128);
         let summary = responseText.match(summarizeRegex)?.[1]?.slice(0, 512);
 
+        //execute status command
         if(status && interaction.context === 0){
             interaction?.client?.user?.setPresence({activities: [{name: status, type: 4}], status: getUpdateStatus()});
             console.log("Setting status to:", status);
@@ -221,6 +275,7 @@ module.exports = {
             fs.writeFileSync(path.join(process.cwd(), "data/bot/status.txt"), status);
         }
 
+        //execute banner command
         if (bannerDesc && attachment && mimeType?.startsWith("image/") && interaction.context === 0) {
             // handle time duraction for rate limiting
             let currentTime = Date.now();
@@ -243,6 +298,7 @@ module.exports = {
             }
         }
 
+        //add summary of request to request history
         if(summary){
             let currentSummaries = interaction.client.aiContext.summaries.get(interaction.context === 0 ? interaction.guild.id : interaction.user.id) ?? [];
             currentSummaries.push(`[User: ${interaction.user.displayName}, ID: ${interaction.user.id}]: ` + summary);
@@ -250,6 +306,7 @@ module.exports = {
             interaction.client.aiContext.summaries.set(interaction.context === 0 ? interaction.guild.id : interaction.user.id, currentSummaries);
         }
 
+        //remove internal commands from response
         responseText = responseText
         ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
         ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
@@ -267,14 +324,16 @@ module.exports = {
                 .setFile(Buffer.from(JSON.stringify(response, null, "\t")))
             ) 
         }
-
+        
         if(attempt > 1) responseText +=`\n-# Attempt ${attempt}`;
 
+        //add response text to message history
         messages = interaction.client.aiContext.messages.get(channID) ?? [];
         messages.push(`[Request from ${interaction.user.displayName} (ID: ${interaction.user.id}); prompt: "${prompt.slice(0, 300)}"; your response: ${responseText.slice(0, 300)}]`);
         while(messages.join("\n").length > parseInt(process.env.CONTEXT_LIMIT)) messages.shift();
         interaction.client.aiContext.messages.set(channID, messages);
 
+        //split response into multiple messages and send
         const chunks = splitMarkdownMessage(responseText)?.filter(Boolean);
         let msg;
 
@@ -301,9 +360,13 @@ function pollString(p){
 }
 
 function addCitations(response) {
-    let text = response?.text?.trim();
-    const supports = response.candidates[0]?.groundingMetadata?.groundingSupports;
-    const chunks = response.candidates[0]?.groundingMetadata?.groundingChunks;
+    let text = "";
+    if(response?.candidates?.[0]?.content?.parts){
+        text = response.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join("");
+    }
+    text = text.trim();
+    const supports = response?.candidates?.[0]?.groundingMetadata?.groundingSupports;
+    const chunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks;
 
     if (!supports?.length || !chunks?.length || !text) return text;
 
@@ -406,8 +469,8 @@ function splitMarkdownMessage(content, maxLength = 2000) {
 }
 
 function getUpdateStatus() {
-	let date = new Date(Date.now() + (parseFloat(process.env.UTC_OFFSET) * 3600000));
-	if(date.getUTCDay() === 0 || date.getUTCDay() === 6) return PresenceUpdateStatus.Idle;
-	if(date.getUTCDay() === 1) return PresenceUpdateStatus.DoNotDisturb;
-	return PresenceUpdateStatus.Online;
+    let date = new Date(Date.now() + (parseFloat(process.env.UTC_OFFSET) * 3600000));
+    if(date.getUTCDay() === 0 || date.getUTCDay() === 6) return PresenceUpdateStatus.Idle;
+    if(date.getUTCDay() === 1) return PresenceUpdateStatus.DoNotDisturb;
+    return PresenceUpdateStatus.Online;
 }
