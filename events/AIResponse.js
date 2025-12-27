@@ -24,7 +24,7 @@ module.exports = {
     async execute(message, attempt = 0){
         attempt ++;
         try {
-            if(!message.mentions.has(message.client.user.id) || !message.content || message.author.bot) return;
+            if(!message.mentions.has(message.client.user.id) || !message.content) return;
             if(attempt === 1 && Date.now() - message.client.aiContext.lastCalled[message.author.id] < 10000){
                 let msg = await message.channel.send(`<@${message.author.id}> You are on a cooldown, try again in <t:${Math.round((message.client.aiContext.lastCalled[message.author.id] + 15000) / 1000)}:R>`).catch(()=>{});
                 if(msg) setTimeout(()=>msg.delete().catch(()=>{}), 3000);
@@ -322,18 +322,21 @@ module.exports = {
             const chunks = splitMarkdownMessage(responseText)?.filter(Boolean);
             let msg;
 
+            //allowed mentions
+            let allowedMentions = message.author.bot ? {users: [], roles: []} : {users: [message.author.id], roles: []};
+
             if(message.guild){
-                if(chunks.length === 1) return message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [message.author.id], roles: []}});
+                if(chunks.length === 1) return message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions});
                 for(let x = 0; x < chunks.length; x++){
-                    if(x === 0) msg = await message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [message.author.id], roles: []}});
-                    else if(x === chunks.length - 1) await msg?.reply({content: chunks[x]?.slice(0, 2000), embeds, allowedMentions: {users: [message.author.id], roles: []}});
-                    else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [message.author.id], roles: []}});
+                    if(x === 0) msg = await message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions});
+                    else if(x === chunks.length - 1) await msg?.reply({content: chunks[x]?.slice(0, 2000), embeds, allowedMentions});
+                    else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions});
                 }
             }
             else {
-                if(chunks.length === 1) return message.author.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [message.author.id], roles: []}});
+                if(chunks.length === 1) return message.author.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions});
                 for(let x = 0; x < chunks.length; x++){
-                    await message.author.send({content: chunks[x]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [message.author.id], roles: []}});
+                    await message.author.send({content: chunks[x]?.slice(0, 2000), files: responseFile, allowedMentions});
                 }
             }
         } catch (err) {
