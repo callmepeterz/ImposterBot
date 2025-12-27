@@ -7,6 +7,9 @@ const path = require("node:path");
 const setStatusRegex = /\{\{SetStatus::(.+?)\}\}/;
 const setBannerRegex = /\{\{SetBanner::(.+?)\}\}/;
 const summarizeRegex = /\{\{Summarize::(.+?)\}\}/;
+const gifRegex = /\{\{GIF::(.+?)\}\}/;
+
+const gifs = require("../assets/gifs.json");
 
 const supportedFileFormats = require("../assets/geminiSupportedFileFormats.json");
 
@@ -34,13 +37,15 @@ module.exports = {
             const systemInstruction = message.client.aiContext.systemInstruction;
             let botMember = message?.guild?.members?.cache?.get(message.client.user.id);
             let systemPromptFooter = `\n\n-----\n\nCurrent user: ${message.author.displayName}, ID: ${message.author.id}, ${message?.member ? `server nickname: ${message?.member?.nickname}, ` : ""}mentionable with <@${message.author.id}>; Current date and time: ${new Date().toString()}; ${message.context === 0 ? "Currently in a public Discord server" : "Currently in the user's direct messages"}; Current status: "${message.client.status.description}, set at ${(new Date(message.client.status.timeStamp)).toString()}"; Current banner: ${message.client.banner.description}, set at ${message.client.banner.timeStamp?.toString()}; Currently using user ${message.client?.profilepic?.user} 's nickname and profile picture, nickname: ${botMember?.nickname ?? message.client.user.username}, profile picture description: ${message.client?.profilepic?.description ?? "Not available"}`;
+            let gifList = "11. GIFS\n";
             let context = "";
 
             //prevent internal command injections
             let prompt = message.content
             ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
             ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
-            ?.replaceAll(new RegExp(summarizeRegex, "g"), "");
+            ?.replaceAll(new RegExp(summarizeRegex, "g"), "")
+            ?.replaceAll(new RegExp(gifRegex, "g"), "");
 
             let contents = [
                 {
@@ -160,6 +165,12 @@ module.exports = {
                 context += `\n\n-----\n\nRecent polls in this channel (most recent poll is at the bottom of the list)\n`;
                 for(let [_, p] of polls) context += pollString(p);
             }
+
+            //get gif list
+            for(let gifName in gifs){
+                gifList += `- {{GIF::${gifName}}} ${gifs[gifName].description}\n`;
+            }
+            systemPromptFooter = gifList + systemPromptFooter;
             
             //API key selection
             const selectedKey = 1;
@@ -221,6 +232,7 @@ module.exports = {
             let status = responseText.match(setStatusRegex)?.[1]?.slice(0, 128);
             let bannerDesc = responseText.match(setBannerRegex)?.[1]?.slice(0, 128);
             let summary = responseText.match(summarizeRegex)?.[1]?.slice(0, 512);
+            let gif = responseText.match(gifRegex)?.[1]?.slice(0, 512);
 
             //execute status command
             if(status && message.guild){
@@ -258,6 +270,17 @@ module.exports = {
                 }
             }
 
+            //execute gif command
+            let embeds = [];
+            if(gif){
+                if(gifs[gif]){
+                    let embed = new EmbedBuilder()
+                    .setColor(process.env.DEFAULT_COLOR)
+                    .setImage(gifs[gif].url);
+                    embeds.push(embed);
+                }
+            }
+
             //add summary of request to request history
             if(summary){
                 let currentSummaries = message.client.aiContext.summaries.get(message.guild ? message.guild.id : message.author.id) ?? [];
@@ -270,6 +293,7 @@ module.exports = {
             responseText = responseText
             ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
             ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
+            ?.replaceAll(new RegExp(gifRegex, "g"), "")
             ?.replaceAll(new RegExp(summarizeRegex, "g"), "");
 
             responseText = responseText.trim();
@@ -299,12 +323,15 @@ module.exports = {
             let msg;
 
             if(message.guild){
+                if(chunks.length === 1) return message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [message.author.id], roles: []}});
                 for(let x = 0; x < chunks.length; x++){
                     if(x === 0) msg = await message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [message.author.id], roles: []}});
+                    else if(x === chunks.length - 1) await msg?.reply({content: chunks[x]?.slice(0, 2000), embeds, allowedMentions: {users: [message.author.id], roles: []}});
                     else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [message.author.id], roles: []}});
                 }
             }
             else {
+                if(chunks.length === 1) return message.author.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [message.author.id], roles: []}});
                 for(let x = 0; x < chunks.length; x++){
                     await message.author.send({content: chunks[x]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [message.author.id], roles: []}});
                 }

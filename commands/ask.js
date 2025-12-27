@@ -1,4 +1,4 @@
-const { Collection, SlashCommandBuilder, SlashCommandStringOption, SlashCommandNumberOption, SlashCommandAttachmentOption, ApplicationCommandOptionType, ChatInputCommandInteraction, InteractionResponse, SlashCommandIntegerOption, PresenceUpdateStatus, AttachmentBuilder, InteractionContextType } = require('discord.js');
+const { Collection, SlashCommandBuilder, SlashCommandStringOption, SlashCommandNumberOption, SlashCommandAttachmentOption, ApplicationCommandOptionType, ChatInputCommandInteraction, InteractionResponse, SlashCommandIntegerOption, PresenceUpdateStatus, AttachmentBuilder, InteractionContextType, EmbedBuilder } = require('discord.js');
 const get = require("../util/httpsGet.js");
 const { HarmCategory, HarmBlockThreshold } = require("@google/genai");
 const { formatMath, formatSuperscript } = require("../util/formatMath.js");
@@ -7,6 +7,9 @@ const path = require("node:path");
 const setStatusRegex = /\{\{SetStatus::(.+?)\}\}/;
 const setBannerRegex = /\{\{SetBanner::(.+?)\}\}/;
 const summarizeRegex = /\{\{Summarize::(.+?)\}\}/;
+const gifRegex = /\{\{GIF::(.+?)\}\}/;
+
+const gifs = require("../assets/gifs.json");
 
 const supportedFileFormats = require("../assets/geminiSupportedFileFormats.json");
 
@@ -84,13 +87,15 @@ module.exports = {
         let attachment = interaction.options.getAttachment("file");
         let botMember = interaction?.guild?.members?.cache?.get(interaction.client.user.id);
         let systemPromptFooter = `\n\n-----\n\nCurrent user: ${interaction.user.displayName}, ID: ${interaction.user.id}, ${interaction.context === InteractionContextType.Guild ? `server nickname: ${interaction?.member?.nickname}, ` : ""}mentionable with <@${interaction.user.id}>; Current date and time: ${new Date().toString()}; ${interaction.context === 0 ? "Currently in a public Discord server" : "Currently in the user's direct messages"}; Current status: "${interaction.client.status.description}, set at ${(new Date(interaction.client.status.timeStamp)).toString()}"; Current banner: ${interaction.client.banner.description}, set at ${interaction.client.banner.timeStamp?.toString()}; Currently using user ${interaction.client?.profilepic?.user} 's nickname and profile picture, nickname: ${botMember?.nickname ?? interaction.client.user.username}, profile picture description: ${interaction.client?.profilepic?.description ?? "Not available"}`;
+        let gifList = "11. GIFS\n";
         let context = "";
 
         //prevent internal command injections
         let prompt = interaction.options.getString("question")
         ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
         ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
-        ?.replaceAll(new RegExp(summarizeRegex, "g"), "");
+        ?.replaceAll(new RegExp(summarizeRegex, "g"), "")
+        ?.replaceAll(new RegExp(gifRegex, "g"), "");
 
         let contents = [
             {
@@ -201,6 +206,12 @@ module.exports = {
             for(let [_, p] of polls) context += pollString(p);
         }
 
+        //get gif list
+        for(let gifName in gifs){
+            gifList += `- {{GIF::${gifName}}} ${gifs[gifName].description}\n`;
+        }
+        systemPromptFooter = gifList + systemPromptFooter;
+        
         contents[0].text += context;
         
         //API key selection
@@ -261,6 +272,7 @@ module.exports = {
         let status = responseText.match(setStatusRegex)?.[1]?.slice(0, 128);
         let bannerDesc = responseText.match(setBannerRegex)?.[1]?.slice(0, 128);
         let summary = responseText.match(summarizeRegex)?.[1]?.slice(0, 512);
+        let gif = responseText.match(gifRegex)?.[1]?.slice(0, 512);
 
         //execute status command
         if(status && interaction.context === 0){
@@ -298,6 +310,17 @@ module.exports = {
             }
         }
 
+        //execute gif command
+        let embeds = [];
+        if(gif){
+            if(gifs[gif]){
+                let embed = new EmbedBuilder()
+                .setColor(process.env.DEFAULT_COLOR)
+                .setImage(gifs[gif].url);
+                embeds.push(embed);
+            }
+        }
+
         //add summary of request to request history
         if(summary){
             let currentSummaries = interaction.client.aiContext.summaries.get(interaction.context === 0 ? interaction.guild.id : interaction.user.id) ?? [];
@@ -310,6 +333,7 @@ module.exports = {
         responseText = responseText
         ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
         ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
+        ?.replaceAll(new RegExp(gifRegex, "g"), "")
         ?.replaceAll(new RegExp(summarizeRegex, "g"), "");
 
         responseText = responseText.trim();
@@ -338,17 +362,21 @@ module.exports = {
         let msg;
 
         if(interaction.context === 0){
+            if(chunks.length === 1) return deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [], roles: []}});
             for(let x = 0; x < chunks.length; x++){
                 if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [], roles: []}});
                 else if(x === 1) msg = await interaction?.followUp({content: chunks[1]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
                 else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
             }
+            msg?.reply({embeds});
         }
         else {
-             for(let x = 0; x < chunks.length; x++){
+            if(chunks.length === 1) return deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions: {users: [], roles: []}});
+            for(let x = 0; x < chunks.length; x++){
                 if(x === 0) await deferred?.edit({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions: {users: [], roles: []}});
                 else await interaction.user.send({content: chunks[x]?.slice(0, 2000), allowedMentions: {users: [], roles: []}});
             }
+            interaction.user.send({embeds});
         }
     },
 };
