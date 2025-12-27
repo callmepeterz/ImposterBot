@@ -137,3 +137,6 @@ systemPrompt.txt
 
 # HSR cache
 hsrCache/
+
+# Test files
+\!*
