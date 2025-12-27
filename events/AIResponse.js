@@ -323,7 +323,7 @@ module.exports = {
             let msg;
 
             //allowed mentions
-            let allowedMentions = message.author.bot ? {users: [], roles: []} : {users: [message.author.id], roles: []};
+            let allowedMentions = message.author.bot ? {users: [], roles: []} : {users: [message.author.id, ...JSON.parse(process.env.ALLOWED_MENTIONS)], roles: []};
 
             if(message.guild){
                 if(chunks.length === 1) return message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions});
