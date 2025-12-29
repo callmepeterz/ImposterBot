@@ -25,6 +25,7 @@ module.exports = {
         attempt ++;
         try {
             if(!message.mentions.has(message.client.user.id) || !message.content) return;
+            if(!isOwnTurn(message)) return;
             if(attempt === 1 && Date.now() - message.client.aiContext.lastCalled[message.author.id] < 10000){
                 let msg = await message.channel.send(`<@${message.author.id}> You are on a cooldown, try again in <t:${Math.round((message.client.aiContext.lastCalled[message.author.id] + 15000) / 1000)}:R>`).catch(()=>{});
                 if(msg) setTimeout(()=>msg.delete().catch(()=>{}), 3000);
@@ -323,9 +324,17 @@ module.exports = {
             let msg;
 
             //allowed mentions
-            let allowedMentions = message.author.bot ? {users: [], roles: []} : {users: [message.author.id, ...JSON.parse(process.env.ALLOWED_MENTIONS)], roles: []};
+            let allowedMentions = message.author.bot ? {users: [], roles: [], repliedUser: false} : {users: [message.author.id, ...JSON.parse(process.env.ALLOWED_MENTIONS)], roles: []};
 
-            if(message.guild){
+            if(message.author.bot){
+                if(chunks.length === 1) return message.reply({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions});
+                for(let x = 0; x < chunks.length; x++){
+                    if(x === 0) msg = await message.reply({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions});
+                    else if(x === chunks.length - 1) await msg?.reply({content: chunks[x]?.slice(0, 2000), embeds, allowedMentions});
+                    else msg = await msg?.reply({content: chunks[x]?.slice(0, 2000), allowedMentions});
+                }
+            }
+            else if(message.guild){
                 if(chunks.length === 1) return message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, embeds, allowedMentions});
                 for(let x = 0; x < chunks.length; x++){
                     if(x === 0) msg = await message.channel.send({content: chunks[0]?.slice(0, 2000), files: responseFile, allowedMentions});
@@ -349,6 +358,18 @@ module.exports = {
         }
     },
 };
+
+function isOwnTurn(message){
+    let mentionedUsers = Array.prototype.from(message.mentions?.parsedUsers?.keys());
+    if(message.mentions?.repliedUser) mentionedUsers = [message.mentions.repliedUser.id, ...mentionedUsers];
+    let botMentions = JSON.parse(process.env.ALLOWED_MENTIONS || "[]");
+    let ownId = message.client.user.id;
+    for(m of mentionedUsers){
+        if(m === ownId) return true;
+        if(botMentions?.includes(m)) return false;
+    }
+    return true;
+}
 
 function pollString(p){
     let s = `[Author: ${p.author.name}, ID: ${p.author.id}]: ${p.question}\n`;
