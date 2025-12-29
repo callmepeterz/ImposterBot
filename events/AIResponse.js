@@ -360,7 +360,7 @@ module.exports = {
 };
 
 function isOwnTurn(message){
-    let mentionedUsers = Array.prototype.from(message.mentions?.parsedUsers?.keys());
+    let mentionedUsers = Array.from(message.mentions?.parsedUsers?.keys());
     if(message.mentions?.repliedUser) mentionedUsers = [message.mentions.repliedUser.id, ...mentionedUsers];
     let botMentions = JSON.parse(process.env.ALLOWED_MENTIONS || "[]");
     let ownId = message.client.user.id;
