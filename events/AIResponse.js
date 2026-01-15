@@ -8,6 +8,7 @@ const setStatusRegex = /\{\{SetStatus::(.+?)\}\}/;
 const setBannerRegex = /\{\{SetBanner::(.+?)\}\}/;
 const summarizeRegex = /\{\{Summarize::(.+?)\}\}/;
 const gifRegex = /\{\{GIF::(.+?)\}\}/;
+const reactRegex = /\{\{React::(.+?)\}\}/;
 
 const gifs = require("../assets/gifs.json");
 
@@ -282,6 +283,11 @@ module.exports = {
                 }
             }
 
+            //execute react command
+            if(react){
+                message.react(react).catch(()=>{});
+            }
+
             //add summary of request to request history
             if(summary){
                 let currentSummaries = message.client.aiContext.summaries.get(message.guild ? message.guild.id : message.author.id) ?? [];
@@ -295,7 +301,8 @@ module.exports = {
             ?.replaceAll(new RegExp(setStatusRegex, "g"), "")
             ?.replaceAll(new RegExp(setBannerRegex, "g"), "")
             ?.replaceAll(new RegExp(gifRegex, "g"), "")
-            ?.replaceAll(new RegExp(summarizeRegex, "g"), "");
+            ?.replaceAll(new RegExp(summarizeRegex, "g"), "")
+            ?.replaceAll(new RegExp(reactRegex, "g"), "");
 
             responseText = responseText.trim();
 
