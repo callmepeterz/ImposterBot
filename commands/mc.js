@@ -22,8 +22,8 @@ module.exports = {
       
         try {
             let response = await getServerStatus(process.env.MINECRAFT_SERVER_ADDRESS, parseInt(process.env.MINECRAFT_SERVER_PORT));
-            embed.setTitle(`${process.env.MINECRAFT_SERVER_ADDRESS}:${process.env.MINECRAFT_SERVER_PORT}`)
-            .setDescription(getMotdText(response.description))
+            embed
+            .setDescription(`\`\`\`js\n${process.env.MINECRAFT_SERVER_ADDRESS}:${process.env.MINECRAFT_SERVER_PORT}\n\`\`\`\n${getMotdText(response.description).slice(0, 1000)}`)
             .setThumbnail("attachment://icon.png")
             .addFields({name: "Status", value: response.version.protocol !== -1 ? "Online" : response.version.name.replaceAll(/§./g, "").replaceAll("●", "").replaceAll("◌", ""), inline: true});
             if(response.version.protocol !== -1) embed.addFields({name: "Version", value: response.version.name, inline: true});
