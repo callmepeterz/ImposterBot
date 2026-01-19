@@ -30,7 +30,7 @@ module.exports = {
 
             embed.addFields({name: "Players", value: `${response.players.online}/${response.players.max}`, inline: true});
 
-            if(response.players?.sample?.length) embed.addFields({name: "Players online", value: `\`\`\`\n${getPlayerList(response.players.sample)}\n\`\`\``});
+            if(response.players?.sample?.length) embed.addFields({name: "Players online", value: `\`\`\`\n${getPlayerList(response.players.sample).slice(0, 1000)}\n\`\`\``});
 
             const iconAttachment = new AttachmentBuilder(Buffer.from(response.favicon.split(",")[1], "base64"), {name: "icon.png"});
             deferred.edit({embeds: [embed], files: [iconAttachment]});
