@@ -52,7 +52,7 @@ function getMotdText(description){
 function getPlayerList(sample){
     let list = "";
     for(p of sample){
-        list += p.name;
+        list += p.name + "\n";
     }
     return list;
 }
