@@ -1,24 +1,7 @@
-const { Events, Message } = require('discord.js');
-const spoilerRegex = /\|\|([^|]+)\|\|/;
+const { Events, Message, MessageFlags } = require('discord.js');
+const spoilerRegex = /\|\|([^\|]+)\|\|/;
 
-const fxList = [
-    {
-        regex: /(?<prefix>https?:\/\/(?:www\.)?)(?<domain>twitter\.com|x\.com)(?<suffix>(?:\/[^\s\|]*)*)/gmi,
-        domains: ["fxtwitter.com", "girlcockx.com", "hotyurisex.com", "yaoisex.com", "boypussyx.com"]
-    },
-    {
-        regex: /(?<prefix>https?:\/\/(?:www\.)?)(?<domain>instagram\.com)(?<suffix>(?:\/[^\s\|]*)*)/gmi,
-        domains: ["oginstagram.com"]
-    },
-    {
-        regex: /(?<prefix>https?:\/\/(?:www\.)?)(?<domain>facebook\.com)(?<suffix>(?:\/[^\s\|]*)*)/gmi,
-        domains: ["facebed.com"]
-    },
-    {
-        regex: /(?<prefix>https?:\/\/(?:www\.)?(?:vt\.)?)(?<domain>tiktok\.com)(?<suffix>(?:\/[^\s\|]*)*)/gmi,
-        domains: ["tnktok.com"]
-    }
-]
+const fxList = require("../assets/fxList.js");
 
 
 module.exports = {
@@ -39,7 +22,7 @@ module.exports = {
         if(!urlList.length) return;
         if(spoilerRegex.test(message.content)) urlList = `||${urlList}||`;
 
-        message.reply({content: urlList.slice(0, 2000), allowedMentions: {users: [], roles: []}})
+        message.reply({content: urlList.slice(0, 2000), allowedMentions: {users: [], roles: []}, flags: [MessageFlags.SuppressNotifications]})
         .then(() => message?.suppressEmbeds().catch(() => {}))
         .catch(() => {});
     },
