@@ -12,7 +12,7 @@ module.exports = {
      * @param {Message} message 
      */
     async execute(message){
-        if(!message.content || message.author.bot) return;
+        if(!parseInt(process.env.FX_ENABLED) || !message.content || message.author.bot) return;
         
         let urlList = "";
         fxList.forEach(fx => {
