@@ -21,6 +21,7 @@
 		"discord.js": "^14.21.0",
 		"dotenv": "^17.0.1",
 		"sharp": "^0.34.4",
-		"starrail.js": "^1.9.6"
+		"starrail.js": "^1.9.6",
+		"tldts": "^7.4.19"
 	}
 }
