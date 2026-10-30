@@ -6,7 +6,7 @@ module.exports = {
             preservesSubdomains: false,
             preservesWWW: false,
             replacementDomains: ["fxtwitter.com", "girlcockx.com", "hotyurisex.com", "yaoisex.com", "boypussyx.com", "mpregx.com", "faggotx.com"],
-            removedSearchParams: ["s", "t", "twclid"],   
+            removedSearchParams: ["s", "t", "twclid", "a"],   
         },
         {
             matchDomains: ["instagram.com"],
@@ -14,7 +14,7 @@ module.exports = {
             preservesSubdomains: false,
             preservesWWW: false,
             replacementDomains: ["oginstagram.com"],
-            removedSearchParams: ["obrf", "igshid", "igsh", "dlrf", "rpxt", "xtok"]
+            removedSearchParams: ["obrf", "igshid", "igsh", "dlrf", "rpxt", "xtok", "exln"]
         },
         {
             matchDomains: ["facebook.com"],
